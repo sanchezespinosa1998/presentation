@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GA4 + HubSpot Setup — Hiperorb | Ironhack Lab</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ga4-orange: #E8710A;
+    --ga4-blue: #1A73E8;
+    --hs-orange: #FF7A59;
+    --dark: #0F172A;
+    --dark2: #1E293B;
+    --slate: #334155;
+    --muted: #64748B;
+    --light: #F1F5F9;
+    --white: #FFFFFF;
+    --green: #10B981;
+    --yellow: #F59E0B;
+    --red: #EF4444;
+    --accent: #6366F1;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: var(--dark);
+    overflow: hidden;
+  }
+
+  /* ===== PRESENTATION WRAPPER ===== */
+  .presentation {
+    width: 100vw; height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===== SLIDES ===== */
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(60px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+  .slide.prev {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  /* ===== SLIDE TYPES ===== */
+  .slide-cover {
+    background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0F172A 100%);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px;
+  }
+  .slide-cover .cover-logo {
+    font-size: 4rem;
+    margin-bottom: 24px;
+  }
+  .slide-cover h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .slide-cover h1 span { color: var(--ga4-orange); }
+  .slide-cover .subtitle {
+    font-size: 1.2rem;
+    color: #94A3B8;
+    margin-bottom: 32px;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cover-meta .meta-item {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 12px 20px;
+    color: var(--white);
+  }
+  .cover-meta .meta-item .label { font-size: 0.7rem; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+  .cover-meta .meta-item .value { font-size: 0.95rem; font-weight: 600; margin-top: 2px; }
+
+  .slide-content {
+    background: var(--dark2);
+    padding: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  .slide-header {
+    background: linear-gradient(90deg, var(--dark) 0%, var(--dark2) 100%);
+    padding: 24px 48px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .slide-header .step-badge {
+    background: var(--ga4-orange);
+    color: var(--white);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .slide-header .step-badge.hs { background: var(--hs-orange); }
+  .slide-header .step-badge.done { background: var(--green); }
+  .slide-header .step-badge.warn { background: var(--yellow); }
+  .slide-header .step-badge.info { background: var(--accent); }
+  .slide-header h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .slide-header .icon { font-size: 1.8rem; }
+
+  .slide-body {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .panel {
+    padding: 40px 60px;
+    overflow: auto;
+  }
+  .panel.dark { background: var(--dark); }
+
+  /* ===== CONTENT ELEMENTS ===== */
+  .result-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: #CBD5E1;
+    font-size: 0.9rem;
+  }
+  .result-item:last-child { border-bottom: none; }
+  .result-item .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .result-item strong { color: var(--white); }
+
+  .info-box {
+    background: rgba(26,115,232,0.1);
+    border: 1px solid rgba(26,115,232,0.3);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    color: #93C5FD;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .info-box.orange {
+    background: rgba(232,113,10,0.1);
+    border-color: rgba(232,113,10,0.3);
+    color: #FBD38D;
+  }
+  .info-box.green {
+    background: rgba(16,185,129,0.1);
+    border-color: rgba(16,185,129,0.3);
+    color: #6EE7B7;
+  }
+  .info-box.red {
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.25);
+    color: #FCA5A5;
+  }
+  .info-box.purple {
+    background: rgba(99,102,241,0.1);
+    border-color: rgba(99,102,241,0.3);
+    color: #C4B5FD;
+  }
+  .info-box .box-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .kpi-row {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .kpi {
+    flex: 1;
+    min-width: 100px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .kpi .kpi-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ga4-orange);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi .kpi-val.blue { color: var(--ga4-blue); }
+  .kpi .kpi-val.green { color: var(--green); }
+  .kpi .kpi-val.purple { color: var(--accent); }
+  .kpi .kpi-label {
+    font-size: 0.7rem;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.82rem;
+  }
+  th {
+    background: rgba(255,255,255,0.06);
+    color: #94A3B8;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  td {
+    padding: 8px 12px;
+    color: #CBD5E1;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .badge.green { background: rgba(16,185,129,0.15); color: #34D399; }
+  .badge.orange { background: rgba(232,113,10,0.15); color: #FB923C; }
+  .badge.yellow { background: rgba(245,158,11,0.15); color: #FCD34D; }
+  .badge.blue { background: rgba(26,115,232,0.15); color: #60A5FA; }
+  .badge.gray { background: rgba(100,116,139,0.2); color: #94A3B8; }
+  .badge.red { background: rgba(239,68,68,0.15); color: #F87171; }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ga4-orange);
+    margin-bottom: 10px;
+  }
+  .section-label.blue { color: var(--ga4-blue); }
+  .section-label.hs { color: var(--hs-orange); }
+  .section-label.green { color: var(--green); }
+
+  h3 { font-size: 1rem; color: var(--white); font-weight: 600; margin-bottom: 12px; }
+  p { color: #94A3B8; font-size: 0.88rem; line-height: 1.7; margin-bottom: 10px; }
+
+  /* ===== NAVIGATION ===== */
+  .nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(15,23,42,0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 40px;
+    padding: 10px 20px;
+    z-index: 100;
+  }
+  .nav button {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--white);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .nav button:hover { background: var(--ga4-orange); border-color: var(--ga4-orange); }
+  .nav button:disabled { opacity: 0.3; cursor: default; }
+  .nav button:disabled:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+  .nav .counter { color: #94A3B8; font-size: 0.82rem; min-width: 60px; text-align: center; }
+  .nav .counter span { color: var(--white); font-weight: 600; }
+
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--ga4-orange), var(--ga4-blue));
+    transition: width 0.4s ease;
+    z-index: 200;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Dots */
+  .dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dot.active {
+    width: 20px;
+    border-radius: 3px;
+    background: var(--ga4-orange);
+  }
+
+  /* Keyboard hint */
+  .kbd-hint {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    color: #475569;
+    font-size: 0.7rem;
+    text-align: right;
+    background: rgba(15,23,42,0.6);
+    padding: 6px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<div class="presentation" id="presentation">
+
+  <!-- ============================================================
+       SLIDE 0 — COVER
+  ============================================================ -->
+  <div class="slide slide-cover active" data-index="0">
+    <div class="cover-logo">📊</div>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:12px;">
+      <span style="background:rgba(232,113,10,0.2);border:1px solid rgba(232,113,10,0.4);color:#FB923C;font-size:0.8rem;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:1px;">IRONHACK · MARKETING BOOTCAMP</span>
+    </div>
+    <h1><span>GA4</span> Setup<br>and HubSpot Integration</h1>
+    <p class="subtitle">LAB | Setting up GA4 for Website Tracking & HubSpot Integration</p>
+    <div class="cover-meta">
+      <div class="meta-item">
+        <div class="label">Student</div>
+        <div class="value">Alejandro Sánchez</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Website</div>
+        <div class="value">hiperorb.com</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">GA4 ID</div>
+        <div class="value" style="color:#FB923C;">G-LRVL76916S</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Date</div>
+        <div class="value">June 3, 2026</div>
+      </div>
+    </div>
+    <div style="margin-top:48px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <span style="background:rgba(26,115,232,0.15);border:1px solid rgba(26,115,232,0.3);color:#60A5FA;padding:6px 14px;border-radius:6px;font-size:0.8rem;">✅ GA4 Property</span>
+      <span style="background:rgba(232,113,10,0.15);border:1px solid rgba(232,113,10,0.3);color:#FB923C;padding:6px 14px;border-radius:6px;font-size:0.8rem;">✅ Enhanced Measurement</span>
+      <span style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34D399;padding:6px 14px;border-radius:6px;font-size:0.8rem;">✅ Key Events</span>
+      <span style="background:rgba(255,122,89,0.15);border:1px solid rgba(255,122,89,0.3);color:#FF7A59;padding:6px 14px;border-radius:6px;font-size:0.8rem;">✅ HubSpot</span>
+      <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#A5B4FC;padding:6px 14px;border-radius:6px;font-size:0.8rem;">✅ DebugView</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SLIDE 1 — GA4 PROPERTY
+  ============================================================ -->
+  <div class="slide slide-content" data-index="1">
+    <div class="slide-header">
+      <span class="icon">📈</span>
+      <span class="step-badge">Steps 1 & 2</span>
+      <h2>GA4 Property — Hiperorb</h2>
+    </div>
+    <div class="slide-body">
+      <div class="panel dark">
+        <div class="section-label">Google Analytics 4</div>
+        <h3>Property and Account Identity</h3>
+        <p>The GA4 property for Hiperorb already existed and was verified as the baseline for this lab. The active measurement ID and correct account structure were confirmed.</p>
+
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-val">G-LRV<br>L76916S</div>
+            <div class="kpi-label">Measurement ID</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-val blue">GA4</div>
+            <div class="kpi-label">Version</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-val green">✓</div>
+            <div class="kpi-label">Active</div>
+          </div>
+        </div>
+
+        <div class="result-item"><span class="icon">✅</span><div><strong>Property:</strong> Hiperorb</div></div>
+        <div class="result-item"><span class="icon">✅</span><div><strong>Account:</strong> All Accounts › Hiperorb</div></div>
+        <div class="result-item"><span class="icon">✅</span><div><strong>Measurement ID:</strong> G-LRVL76916S</div></div>
+        <div class="result-item"><span class="icon">✅</span><div><strong>Website:</strong> https://www.hiperorb.com/</div></div>
+        <div class="result-item"><span class="icon">✅</span><div><strong>Stream ID:</strong> 12065670105</div></div>
+
+        <div class="info-box orange" style="margin-top:20px;">
+          <div class="box-title">🌐 Web Data Stream</div>
+          The web data stream was correctly configured, pointing to <strong>https://www.hiperorb.com/</strong> with the platform type set to <strong>Web</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SLIDE 2 — DATA STREAM
+  ============================================================ -->
+  <div class="slide slide-content" data-index="2">
+    <div class="slide-header">
+      <span class="icon">🌊</span>
+      <span class="step-badge">Step 2</span>
+      <h2>Web Data Stream Configuration</h2>
+    </div>
+    <div class="slide-body">
+      <div class="panel dark">
+        <div class="section-label">Admin › Data collection › Data streams</div>
+        <h3>Verified and Active Data Stream</h3>
+        <p>The web data stream was successfully validated for Hiperorb's root domain. All key stream tracking parameters were cross-checked.</p>
+
+        <table>
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Stream Name</td><td><strong style="color:#fff">Hiperorb</strong></td></tr>
+          <tr><td>Stream URL</td><td><span class="badge blue">https://www.hiperorb.com/</span></td></tr>
+          <tr><td>Stream ID</td><td><span class="badge orange">12065670105</span></td></tr>
+          <tr><td>Measurement ID</td><td><span class="badge green">G-LRVL76916S</span></td></tr>
+          <tr><td>Type</td><td><span class="badge blue">Web</span></td></tr>
+          <tr><td>Platform</td><td><span class="badge gray">🌐 Website</span></td></tr>
+        </table>
+
+        <div class="info-box green" style="margin-top:16px;">
+          <div class="box-title">✅ Correct Stream Details</div>
+          The data stream is properly bound to the target domain, and the measurement ID <strong>G-LRVL76916S</strong> is verified as the active snippet running live on the site.
+        </div>
+
+        <div class="info-box">
+          <div class="box-title">ℹ️ Tracking Tag Status</div>
+          The student confirmed that the <strong>gtag.js</strong> tracking snippet was already natively embedded into hiperorb.com prior to starting, rendering manual deployment unnecessary (Step 3 completed).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SLIDE 3 — ENHANCED MEASUREMENT
+  ============================================================ -->
+  <div class="slide slide-content" data-index="3">
+    <div class="slide-header">
+      <span class="icon">⚙️</span>
+      <span class="step-badge">Step 4</span>
+      <h2>Enhanced Measurement — All Events Enabled</h2>
+    </div>
+    <div class="slide-body">
+      <div class="panel dark">
+        <div class="section-label">Web stream details › Events</div>
+        <h3>7 Automated Event Types Fully Active</h3>
+        <p>Enhanced measurement functionality natively tracks user interactions without writing extra codebase triggers. All options are currently active.</p>
+
+        <table>
+          <tr><th>Event Type</th><th>Description</th><th>Status</th></tr>
+          <tr><td>Page views</td><td>Tracks each initial page load or URL state change</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>Scrolls</td><td>Fires when user reaches 90% vertical depth</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>Outbound clics</td><td>Tracks links leading outside the target domain</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>Site search</td><td>Captures internal search query parameters</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>Form interactions</td><td>Tracks user form engagement and submission states</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>Video engagement</td><td>Logs video play, progress thresholds, and completions</td><td><span class="badge green">✅ Active</span></td></tr>
+          <tr><td>File downloads</td><td>Triggers on document, asset, or application clicks</td><td><span class="badge green">✅ Active</span></td></tr>
+        </table>
+
+        <div class="info-box green" style="margin-top:12px;">
+          <div class="box-title">🎯 100% Enhanced Measurement Deployment</div>
+          All 7 native enhanced behaviors are tracking data. GA4 will seamlessly collect all regular engagement metrics on hiperorb.com automatically.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SLIDE 4 — KEY EVENTS
+  ============================================================ -->
+  <div class="slide slide-content" data-index="4">
+    <div class="slide-header">
+      <span class="icon">⭐</span>
+      <span class="step-badge">Steps 5 & 6</span>
+      <h2>Key Events and Conversions Configured</h2>
+    </div>
+    <div class="slide-body">
+      <div class="panel dark">
+        <div class="section-label">Admin › Data display › Events</div>
+        <h3>9 Total Events — 3 Custom Lab Creational Instances</h3>
+        <p>Three new custom events representing Hiperorb's primary business objectives were created during the lab, alongside the audit of 6 legacy structures.</p>
+
+        <table>
+          <tr><th>Event Name</th><th>Source Origin</th><th>Classification Type</th></tr>
+          <tr><td><code style="color:#FB923C">lead_form_submit</code></td><td><span class="badge green">✅ Lab Created</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#FB923C">demo_request</code></td><td><span class="badge green">✅ Lab Created</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#FB923C">video_play_product</code></td><td><span class="badge green">✅ Lab Created</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">click</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">close_convert_lead</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">page_view</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">qualify_lead</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">whatsapp_click_total</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge orange">★ Key Event</span></td></tr>
+          <tr><td><code style="color:#94A3B8">purchase</code></td><td><span class="badge gray">Legacy / Pre-existing</span></td><td><span class="badge gray">☆ Standard Event</span></td></tr>
+        </table>
+
+        <div class="info-box orange">
+          <div class="box-title">⭐ Marked as Conversions</div>
+          The 3 newly built events + 5 historical actions are explicitly marked as <strong>Key Events</strong> (the current GA4 terminology replacing structural conversions).
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> <!-- Close presentation -->
+
+<!-- ===== NAVIGATION CONTROLS ===== -->
+<div class="nav">
+  <button id="prevBtn" title="Previous (Left Arrow)">←</button>
+  <div class="dots" id="dotsContainer"></div>
+  <div class="counter" id="counter"><span>1</span> / 5</div>
+  <button id="nextBtn" title="Next (Right Arrow or Space)">→</button>
+</div>
+
+<div class="kbd-hint">Use Keyboard Arrows 💻 ◄ / ► or Spacebar to navigate</div>
+
+<!-- ===== NAVIGATION SCRIPT ===== -->
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const counter = document.getElementById('counter');
+  const progressBar = document.getElementById('progressBar');
+  const dotsContainer = document.getElementById('dotsContainer');
+
+  let currentSlide = 0;
+  const totalSlides = slides.length;
+
+  function createDots() {
+    dotsContainer.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      if (i === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => showSlide(i));
+      dotsContainer.appendChild(dot);
+    }
+  }
+
+  function showSlide(index) {
+    if (index < 0 || index >= totalSlides) return;
+
+    currentSlide = index;
+
+    slides.forEach((slide, i) => {
+      slide.classList.remove('active', 'prev');
+      if (i === currentSlide) {
+        slide.classList.add('active');
+      } else if (i < currentSlide) {
+        slide.classList.add('prev');
+      }
+    });
+
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((dot, i) => {
+      if (i === currentSlide) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+
+    if (progressBar) {
+      const progress = ((currentSlide + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progress}%`;
+    }
+
+    if (counter) {
+      counter.innerHTML = `<span>${currentSlide + 1}</span> / ${totalSlides}`;
+    }
+
+    if (prevBtn) prevBtn.disabled = currentSlide === 0;
+    if (nextBtn) nextBtn.disabled = currentSlide === totalSlides - 1;
+  }
+
+  if (prevBtn) prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+  if (nextBtn) nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault(); 
+      showSlide(currentSlide + 1);
+    } else if (e.key === 'ArrowLeft') {
+      showSlide(currentSlide - 1);
+    }
+  });
+
+  createDots();
+  showSlide(0);
+</script>
+
+</body>
+</html>
